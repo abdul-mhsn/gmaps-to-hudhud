@@ -46,16 +46,37 @@
         font-size: 0.9rem;
       }
       label { font-size: 0.85rem; color: var(--muted); }
+      .input-wrap { position: relative; margin-top: 6px; }
       input[type="text"] {
         width: 100%;
-        margin-top: 6px;
-        padding: 12px 14px;
+        padding: 12px 40px 12px 14px;
         border-radius: 10px;
         border: 1px solid var(--border);
         background: #0d1217;
         color: var(--text);
         font-size: 0.95rem;
       }
+      #clear {
+        position: absolute;
+        top: 50%;
+        right: 8px;
+        transform: translateY(-50%);
+        width: 24px;
+        height: 24px;
+        margin: 0;
+        padding: 0;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        background: #2a333d;
+        color: var(--muted);
+        font-size: 1.1rem;
+        line-height: 1;
+        cursor: pointer;
+      }
+      #clear.show { display: flex; }
+      #clear:hover { background: #36414d; color: var(--text); }
       input[type="text"]:focus {
         outline: none;
         border-color: var(--accent);
@@ -100,18 +121,6 @@
         font-size: 0.9rem;
       }
       .link-row a:hover { text-decoration: underline; }
-      .mini-btn {
-        width: auto;
-        margin: 0;
-        padding: 6px 12px;
-        font-size: 0.8rem;
-        background: #2a333d;
-        color: var(--text);
-        white-space: nowrap;
-      }
-      .mini-btn:hover:not(:disabled) { background: #36414d; }
-      .coords { margin-top: 14px; font-size: 0.85rem; color: var(--muted); }
-      .coords b { color: var(--text); }
       .err-msg { color: var(--error); font-size: 0.9rem; }
     </style>
   </head>
@@ -121,13 +130,16 @@
       <p class="sub">Paste a Google Maps link and get the matching Hudhud Maps link.</p>
 
       <label for="url">Google Maps link</label>
-      <input
-        id="url"
-        type="text"
-        placeholder="https://maps.app.goo.gl/..."
-        autocomplete="off"
-        spellcheck="false"
-      />
+      <div class="input-wrap">
+        <input
+          id="url"
+          type="text"
+          placeholder="https://maps.app.goo.gl/..."
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button id="clear" type="button" aria-label="Clear" title="Clear">&times;</button>
+      </div>
       <button id="convert">Convert</button>
 
       <div id="result" class="result"></div>
@@ -137,6 +149,19 @@
       const input = document.getElementById("url");
       const btn = document.getElementById("convert");
       const result = document.getElementById("result");
+      const clearBtn = document.getElementById("clear");
+
+      function toggleClear() {
+        clearBtn.classList.toggle("show", input.value.length > 0);
+      }
+      input.addEventListener("input", toggleClear);
+      clearBtn.addEventListener("click", () => {
+        input.value = "";
+        toggleClear();
+        result.className = "result";
+        result.innerHTML = "";
+        input.focus();
+      });
 
       async function convert() {
         const url = input.value.trim();
@@ -182,27 +207,11 @@
           <div class="label">Hudhud Maps link</div>
           <div class="link-row">
             <a id="hudhud" target="_blank" rel="noopener"></a>
-            <button class="mini-btn" id="copy">Copy</button>
-          </div>
-          <div class="coords">
-            Coordinates: <b id="coords"></b>
-            &nbsp;·&nbsp;
-            <a id="verify" target="_blank" rel="noopener">verify on Google Maps</a>
           </div>
         `;
         const a = result.querySelector("#hudhud");
         a.href = data.hudhudUrl;
         a.textContent = data.hudhudUrl;
-        result.querySelector("#coords").textContent =
-          data.lat + ", " + data.lng;
-        result.querySelector("#verify").href =
-          "https://www.google.com/maps?q=" + data.lat + "," + data.lng;
-
-        result.querySelector("#copy").addEventListener("click", async (e) => {
-          await navigator.clipboard.writeText(data.hudhudUrl);
-          e.target.textContent = "Copied!";
-          setTimeout(() => (e.target.textContent = "Copy"), 1500);
-        });
       }
 
       btn.addEventListener("click", convert);
