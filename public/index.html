@@ -121,6 +121,20 @@
         font-size: 0.9rem;
       }
       .link-row a:hover { text-decoration: underline; }
+      .open-btn {
+        display: block;
+        margin-top: 16px;
+        padding: 12px;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #06210f;
+        font-weight: 700;
+        font-size: 1rem;
+        text-align: center;
+        text-decoration: none;
+        transition: background 0.15s;
+      }
+      .open-btn:hover { background: var(--accent-dark); }
       .err-msg { color: var(--error); font-size: 0.9rem; }
     </style>
   </head>
@@ -208,10 +222,12 @@
           <div class="link-row">
             <a id="hudhud" target="_blank" rel="noopener"></a>
           </div>
+          <a id="open" class="open-btn" target="_blank" rel="noopener">Open in Hudhud Maps</a>
         `;
         const a = result.querySelector("#hudhud");
         a.href = data.hudhudUrl;
         a.textContent = data.hudhudUrl;
+        result.querySelector("#open").href = data.hudhudUrl;
       }
 
       btn.addEventListener("click", convert);
