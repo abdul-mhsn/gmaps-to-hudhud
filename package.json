@@ -1,0 +1,16 @@
+{
+  "name": "gmaps-to-hudhud",
+  "version": "1.0.0",
+  "description": "Convert Google Maps links to Hudhud Maps links for the same location",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

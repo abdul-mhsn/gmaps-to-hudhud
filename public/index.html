@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Google Maps → Hudhud Maps</title>
+    <style>
+      :root {
+        --bg: #0f1419;
+        --card: #1a2129;
+        --accent: #2ecc71;
+        --accent-dark: #27ae60;
+        --text: #e6edf3;
+        --muted: #8b98a5;
+        --border: #2a333d;
+        --error: #ff6b6b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 560px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 32px;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.4rem;
+      }
+      p.sub {
+        margin: 0 0 24px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      label { font-size: 0.85rem; color: var(--muted); }
+      input[type="text"] {
+        width: 100%;
+        margin-top: 6px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #0d1217;
+        color: var(--text);
+        font-size: 0.95rem;
+      }
+      input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+      }
+      button {
+        margin-top: 16px;
+        width: 100%;
+        padding: 12px;
+        border: none;
+        border-radius: 10px;
+        background: var(--accent);
+        color: #06210f;
+        font-weight: 700;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+      button:hover:not(:disabled) { background: var(--accent-dark); }
+      button:disabled { opacity: 0.6; cursor: default; }
+      .result {
+        margin-top: 24px;
+        padding: 18px;
+        border-radius: 12px;
+        background: #0d1217;
+        border: 1px solid var(--border);
+        display: none;
+      }
+      .result.show { display: block; }
+      .result.error { border-color: var(--error); }
+      .result .label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+      .link-row {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+        align-items: center;
+      }
+      .link-row a {
+        flex: 1;
+        color: var(--accent);
+        word-break: break-all;
+        text-decoration: none;
+        font-size: 0.9rem;
+      }
+      .link-row a:hover { text-decoration: underline; }
+      .mini-btn {
+        width: auto;
+        margin: 0;
+        padding: 6px 12px;
+        font-size: 0.8rem;
+        background: #2a333d;
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .mini-btn:hover:not(:disabled) { background: #36414d; }
+      .coords { margin-top: 14px; font-size: 0.85rem; color: var(--muted); }
+      .coords b { color: var(--text); }
+      .err-msg { color: var(--error); font-size: 0.9rem; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h1>Google Maps → Hudhud Maps</h1>
+      <p class="sub">Paste a Google Maps link and get the matching Hudhud Maps link.</p>
+
+      <label for="url">Google Maps link</label>
+      <input
+        id="url"
+        type="text"
+        placeholder="https://maps.app.goo.gl/..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button id="convert">Convert</button>
+
+      <div id="result" class="result"></div>
+    </div>
+
+    <script>
+      const input = document.getElementById("url");
+      const btn = document.getElementById("convert");
+      const result = document.getElementById("result");
+
+      async function convert() {
+        const url = input.value.trim();
+        if (!url) {
+          input.focus();
+          return;
+        }
+        btn.disabled = true;
+        btn.textContent = "Converting…";
+        result.className = "result";
+        result.innerHTML = "";
+
+        try {
+          const res = await fetch("/api/convert", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            showError(data.error || "Conversion failed.");
+            return;
+          }
+          showResult(data);
+        } catch (e) {
+          showError("Network error: " + e.message);
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Convert";
+        }
+      }
+
+      function showError(msg) {
+        result.className = "result show error";
+        result.innerHTML = '<div class="err-msg"></div>';
+        result.querySelector(".err-msg").textContent = msg;
+      }
+
+      function showResult(data) {
+        result.className = "result show";
+        result.innerHTML = `
+          <div class="label">Hudhud Maps link</div>
+          <div class="link-row">
+            <a id="hudhud" target="_blank" rel="noopener"></a>
+            <button class="mini-btn" id="copy">Copy</button>
+          </div>
+          <div class="coords">
+            Coordinates: <b id="coords"></b>
+            &nbsp;·&nbsp;
+            <a id="verify" target="_blank" rel="noopener">verify on Google Maps</a>
+          </div>
+        `;
+        const a = result.querySelector("#hudhud");
+        a.href = data.hudhudUrl;
+        a.textContent = data.hudhudUrl;
+        result.querySelector("#coords").textContent =
+          data.lat + ", " + data.lng;
+        result.querySelector("#verify").href =
+          "https://www.google.com/maps?q=" + data.lat + "," + data.lng;
+
+        result.querySelector("#copy").addEventListener("click", async (e) => {
+          await navigator.clipboard.writeText(data.hudhudUrl);
+          e.target.textContent = "Copied!";
+          setTimeout(() => (e.target.textContent = "Copy"), 1500);
+        });
+      }
+
+      btn.addEventListener("click", convert);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") convert();
+      });
+    </script>
+  </body>
+</html>
