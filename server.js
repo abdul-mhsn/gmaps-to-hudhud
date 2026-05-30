@@ -9,7 +9,50 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 
 const PORT = process.env.PORT || 3000;
-const HUDHUD_BASE = "https://web.hudhud.sa/preview";
+const HUDHUD_LINK_BASE = "https://l.hudhud.sa/l/";
+
+// Hudhud short links (l.hudhud.sa/l/<id>) use a geohash of the coordinates as
+// the id — precision 12, standard base32. Building it here lets us produce the
+// same short-link format Hudhud's app mints, with no API call.
+const GEOHASH_BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+function geohashEncode(lat, lng, precision = 12) {
+  let idx = 0;
+  let bit = 0;
+  let evenBit = true;
+  let geohash = "";
+  let latMin = -90;
+  let latMax = 90;
+  let lonMin = -180;
+  let lonMax = 180;
+  while (geohash.length < precision) {
+    if (evenBit) {
+      const mid = (lonMin + lonMax) / 2;
+      if (lng >= mid) {
+        idx = idx * 2 + 1;
+        lonMin = mid;
+      } else {
+        idx = idx * 2;
+        lonMax = mid;
+      }
+    } else {
+      const mid = (latMin + latMax) / 2;
+      if (lat >= mid) {
+        idx = idx * 2 + 1;
+        latMin = mid;
+      } else {
+        idx = idx * 2;
+        latMax = mid;
+      }
+    }
+    evenBit = !evenBit;
+    if (++bit === 5) {
+      geohash += GEOHASH_BASE32[idx];
+      bit = 0;
+      idx = 0;
+    }
+  }
+  return geohash;
+}
 
 const BROWSER_HEADERS = {
   "User-Agent":
@@ -187,7 +230,7 @@ app.post("/api/convert", async (req, res) => {
       });
     }
 
-    const hudhudUrl = `${HUDHUD_BASE}?lat=${result.lat}&lng=${result.lng}`;
+    const hudhudUrl = `${HUDHUD_LINK_BASE}${geohashEncode(result.lat, result.lng)}`;
     return res.json({
       lat: result.lat,
       lng: result.lng,
